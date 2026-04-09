@@ -3,9 +3,8 @@ onnxruntime==1.16.3
 streamlit
 python-dotenv
 requests
-langchain==0.3.25
-langchain-community==0.3.24
-langchain-groq==0.3.2
+langchain==0.1.20
+langchain-community==0.0.38
 groq==0.23.1
 google-auth==2.40.1
 google-auth-oauthlib==1.2.2
