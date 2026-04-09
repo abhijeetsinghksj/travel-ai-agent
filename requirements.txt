@@ -1,6 +1,6 @@
 crewai==0.28.8
-streamlit
-requests
+streamlit==1.45.0
+requests==2.32.3
 langchain==0.1.20
 langchain-community==0.0.38
 groq==0.23.1
@@ -13,6 +13,5 @@ python-dotenv==1.0.0
 fastapi==0.115.12
 uvicorn==0.34.2
 pydantic==2.11.3
-requests==2.32.3
 python-dateutil==2.9.0
-streamlit==1.45.0
+setuptools>=65.0.0
