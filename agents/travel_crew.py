@@ -116,7 +116,7 @@ def create_agents(llm_config: dict):
         ),
         verbose=True,
         allow_delegation=False,
-        max_iter=10,
+        max_iter=25,
         llm=llm_config,
     )
 
@@ -133,7 +133,7 @@ def create_agents(llm_config: dict):
         tools=[check_calendar_tool, block_calendar_tool],
         verbose=True,
         allow_delegation=False,
-        max_iter=10,
+        max_iter=25,
         llm=llm_config,
     )
 
@@ -149,7 +149,7 @@ def create_agents(llm_config: dict):
         ),
         verbose=True,
         allow_delegation=False,
-        max_iter=10,
+        max_iter=25,
         llm=llm_config,
     )
 
@@ -165,7 +165,7 @@ def create_agents(llm_config: dict):
         tools=[search_flights_tool],
         verbose=True,
         allow_delegation=False,
-        max_iter=10,
+        max_iter=25,
         llm=llm_config,
     )
 
@@ -181,39 +181,20 @@ def create_tasks(agents, destination: str, start_date: str, end_date: str):
 
     # Task 1: Validate & process the travel request
     task_validate = Task(
-        description=(
-            f"Process this travel request:\n"
-            f"- Destination: {destination}\n"
-            f"- Start Date: {start_date}\n"
-            f"- End Date: {end_date}\n\n"
-            f"Validate the dates are in the future and make sense. "
-            f"Calculate the trip duration in days. "
-            f"Identify the destination type (beach, mountain, city, historical, etc.) "
-            f"and provide a brief summary of what the user can expect."
-        ),
-        expected_output=(
-            "A structured trip summary with: validated dates, trip duration in days, "
-            "destination type, and a 2-3 sentence overview of the destination."
-        ),
-        agent=input_agent,
-    )
+    description=f"Trip details: Destination={destination}, Start={start_date}, End={end_date}. Calculate duration in days and write a 2-sentence overview of the destination. Do this directly without using any tools.",
+    expected_output="Trip duration in days and 2-sentence destination overview.",
+    agent=input_agent,
+)
+    
 
     # Task 2: Check calendar & block dates
     task_calendar = Task(
-        description=(
-            f"Check the user's Google Calendar for availability from {start_date} to {end_date}. "
-            f"If the calendar is free (no conflicts), block these dates with a travel event for {destination}. "
-            f"If there are conflicts, report them clearly without blocking. "
-            f"Use the trip summary from the previous task as the event description."
-        ),
-        expected_output=(
-            "A clear report stating: (1) whether the calendar was checked, "
-            "(2) if there are conflicts, (3) whether the dates were blocked or not, "
-            "and (4) any relevant event details."
-        ),
-        agent=calendar_agent,
-        context=[task_validate],
-    )
+    description=f"Use Check_Calendar tool ONCE for dates {start_date} to {end_date}. Then use Block_Calendar tool ONCE to block dates for {destination}. Stop after both tool calls.",
+    expected_output="Calendar check result and confirmation of blocked dates.",
+    agent=calendar_agent,
+    context=[task_validate],
+)
+    
 
     # Task 3: Create itinerary
     trip_days = (
@@ -224,44 +205,19 @@ def create_tasks(agents, destination: str, start_date: str, end_date: str):
     )
 
     task_itinerary = Task(
-        description=(
-            f"Create a detailed day-by-day itinerary for a {trip_days}-day trip to {destination} "
-            f"from {start_date} to {end_date}.\n\n"
-            f"Include for each day:\n"
-            f"- Morning, afternoon, and evening activities\n"
-            f"- Must-see attractions with brief descriptions\n"
-            f"- Local food recommendations (breakfast, lunch, dinner spots)\n"
-            f"- Practical tips (best time to visit, travel within city, etc.)\n"
-            f"- Estimated budget per day in INR\n\n"
-            f"Make it authentic, practical and exciting!"
-        ),
-        expected_output=(
-            f"A complete {trip_days}-day itinerary with day-by-day activities, "
-            "food recommendations, practical tips, and estimated daily budget in INR."
-        ),
-        agent=itinerary_agent,
-        context=[task_validate],
-    )
+    description=f"Write a {trip_days}-day itinerary for {destination}. Include 3 activities per day and one food recommendation. Do not use any tools, write directly from your knowledge.",
+    expected_output=f"A {trip_days}-day itinerary with activities and food.",
+    agent=itinerary_agent,
+    context=[task_validate],
+)
 
     # Task 4: Search flights
     task_flights = Task(
-        description=(
-            f"Search for available flights from the user's home city to {destination}.\n"
-            f"- Outbound: {start_date}\n"
-            f"- Return: {end_date}\n\n"
-            f"Find and present the top flight options showing:\n"
-            f"1. Flight details (airline, timing, duration, stops)\n"
-            f"2. Price in INR\n"
-            f"3. Your top recommendation with reasoning\n"
-            f"4. Tips for getting the best deal"
-        ),
-        expected_output=(
-            "A flight search summary with top available options, "
-            "prices, and a clear recommendation for the best flight choice."
-        ),
-        agent=flight_agent,
-        context=[task_validate],
-    )
+    description=f"Use Search_Flights tool ONCE with destination={destination}, departure_date={start_date}. Then immediately write your recommendation based on results. Do not call the tool again.",
+    expected_output="Top 3 flight options and one recommendation.",
+    agent=flight_agent,
+    context=[task_validate],
+)
 
     return [task_validate, task_calendar, task_itinerary, task_flights]
 
