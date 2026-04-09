@@ -29,35 +29,50 @@ SCOPES = [
 
 
 def _get_calendar_service():
-    """Authenticate and return Google Calendar service."""
+    """Authenticate using Service Account (cloud) or OAuth (local)."""
     if not GOOGLE_AVAILABLE:
-        raise RuntimeError("Google API libraries not installed. Run: pip install google-api-python-client google-auth-oauthlib")
+        raise RuntimeError("Google API libraries not installed.")
 
-    creds = None
-    token_path = os.getenv("GOOGLE_TOKEN_PATH", "./config/token.json")
-    creds_path = os.getenv("GOOGLE_CREDENTIALS_PATH", "./config/credentials.json")
+    # Option 1: Service Account JSON from Streamlit secrets or env (cloud)
+    service_account_json = None
+    try:
+        import streamlit as st
+        service_account_json = st.secrets.get("GOOGLE_SERVICE_ACCOUNT_JSON")
+    except:
+        pass
+    if not service_account_json:
+        service_account_json = os.getenv("GOOGLE_SERVICE_ACCOUNT_JSON")
 
-    if os.path.exists(token_path):
-        creds = Credentials.from_authorized_user_file(token_path, SCOPES)
+    if service_account_json:
+        try:
+            from google.oauth2 import service_account
+            info = json.loads(service_account_json)
+            creds = service_account.Credentials.from_service_account_info(info, scopes=SCOPES)
+            return build("calendar", "v3", credentials=creds)
+        except Exception as e:
+            print(f"[Calendar] Service account failed: {e}")
 
-    if not creds or not creds.valid:
-        if creds and creds.expired and creds.refresh_token:
-            creds.refresh(Request())
-        else:
-            if not os.path.exists(creds_path):
-                raise FileNotFoundError(
-                    f"Google credentials not found at {creds_path}.\n"
-                    "Please download OAuth2 credentials from Google Cloud Console.\n"
-                    "See: https://console.cloud.google.com/apis/credentials"
-                )
-            flow = InstalledAppFlow.from_client_secrets_file(creds_path, SCOPES)
-            creds = flow.run_local_server(port=0)
-
-        os.makedirs(os.path.dirname(token_path), exist_ok=True)
-        with open(token_path, "w") as token:
-            token.write(creds.to_json())
-
-    return build("calendar", "v3", credentials=creds)
+    # Option 2: OAuth token (local)
+    try:
+        creds = None
+        token_path = os.getenv("GOOGLE_TOKEN_PATH", "./config/token.json")
+        creds_path = os.getenv("GOOGLE_CREDENTIALS_PATH", "./config/credentials.json")
+        if os.path.exists(token_path):
+            creds = Credentials.from_authorized_user_file(token_path, SCOPES)
+        if not creds or not creds.valid:
+            if creds and creds.expired and creds.refresh_token:
+                creds.refresh(Request())
+            else:
+                if not os.path.exists(creds_path):
+                    raise FileNotFoundError("No credentials found.")
+                flow = InstalledAppFlow.from_client_secrets_file(creds_path, SCOPES)
+                creds = flow.run_local_server(port=0)
+            os.makedirs(os.path.dirname(token_path), exist_ok=True)
+            with open(token_path, "w") as token:
+                token.write(creds.to_json())
+        return build("calendar", "v3", credentials=creds)
+    except Exception as e:
+        raise RuntimeError(f"All auth methods failed: {e}")
 
 
 def check_calendar_availability(start_date: str, end_date: str) -> dict:
