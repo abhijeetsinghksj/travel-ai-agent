@@ -7,7 +7,7 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from crewai import Agent, Task, Crew, Process
-from crewai.tools import tool
+from crewai import tool
 from config.llm_config import get_crewai_llm
 from tools.calendar_tool import check_calendar_availability, block_calendar
 from tools.flight_tool import search_flights, get_iata_code
