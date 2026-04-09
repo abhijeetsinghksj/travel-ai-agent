@@ -47,16 +47,12 @@ def _get_ollama_llm():
 
 
 def get_crewai_llm():
-    """Returns LLM config dict for CrewAI agents"""
+    """Returns actual LLM object for CrewAI 0.28.8 (needs LangChain object, not dict)"""
+    from langchain_groq import ChatGroq
     groq_key = os.getenv("GROQ_API_KEY")
-    ollama_url = os.getenv("OLLAMA_BASE_URL")
-
-    if groq_key and groq_key != "your_groq_api_key_here":
-        model = os.getenv("LLM_MODEL", "llama3-70b-8192")
-        return {"model": f"groq/{model}"}
-    elif ollama_url:
-        model = os.getenv("OLLAMA_MODEL", "llama3")
-        return {"model": f"ollama/{model}", "base_url": ollama_url}
-    else:
-        model = os.getenv("LLM_MODEL", "llama3-70b-8192")
-        return {"model": f"groq/{model}"}
+    model = os.getenv("LLM_MODEL", "llama-3.3-70b-versatile")
+    return ChatGroq(
+        model=model,
+        temperature=0.3,
+        groq_api_key=groq_key,
+    )

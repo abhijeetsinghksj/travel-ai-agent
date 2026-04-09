@@ -110,7 +110,7 @@ def create_agents(llm_config: dict):
         ),
         verbose=True,
         allow_delegation=False,
-        llm=llm_config["model"],
+        llm=llm_config,
     )
 
     # Agent 2: Calendar Manager
@@ -126,7 +126,7 @@ def create_agents(llm_config: dict):
         tools=[check_calendar_tool, block_calendar_tool],
         verbose=True,
         allow_delegation=False,
-        llm=llm_config["model"],
+        llm=llm_config,
     )
 
     # Agent 3: Itinerary Planner
@@ -141,7 +141,7 @@ def create_agents(llm_config: dict):
         ),
         verbose=True,
         allow_delegation=False,
-        llm=llm_config["model"],
+        llm=llm_config,
     )
 
     # Agent 4: Flight Search Specialist
@@ -156,7 +156,7 @@ def create_agents(llm_config: dict):
         tools=[search_flights_tool],
         verbose=True,
         allow_delegation=False,
-        llm=llm_config["model"],
+        llm=llm_config,
     )
 
     return input_agent, calendar_agent, itinerary_agent, flight_agent
