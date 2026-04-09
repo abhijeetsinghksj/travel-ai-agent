@@ -116,6 +116,7 @@ def create_agents(llm_config: dict):
         ),
         verbose=True,
         allow_delegation=False,
+        max_iter=10,
         llm=llm_config,
     )
 
@@ -132,6 +133,7 @@ def create_agents(llm_config: dict):
         tools=[check_calendar_tool, block_calendar_tool],
         verbose=True,
         allow_delegation=False,
+        max_iter=10,
         llm=llm_config,
     )
 
@@ -147,6 +149,7 @@ def create_agents(llm_config: dict):
         ),
         verbose=True,
         allow_delegation=False,
+        max_iter=10,
         llm=llm_config,
     )
 
@@ -162,6 +165,7 @@ def create_agents(llm_config: dict):
         tools=[search_flights_tool],
         verbose=True,
         allow_delegation=False,
+        max_iter=10,
         llm=llm_config,
     )
 
@@ -293,6 +297,7 @@ def run_travel_crew(destination: str, start_date: str, end_date: str) -> dict:
         tasks=tasks,
         process=Process.sequential,  # Tasks run in order
         verbose=True,
+        max_iter=15,
     )
 
     result = crew.kickoff()
