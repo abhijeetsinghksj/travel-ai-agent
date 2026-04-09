@@ -14,4 +14,4 @@ fastapi==0.115.12
 uvicorn==0.34.2
 pydantic==2.11.3
 python-dateutil==2.9.0
-setuptools>=65.0.0
+setuptools==68.2.2
