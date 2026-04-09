@@ -227,47 +227,57 @@ def create_tasks(agents, destination: str, start_date: str, end_date: str):
 # ─────────────────────────────────────────────
 
 def run_travel_crew(destination: str, start_date: str, end_date: str) -> dict:
-    """
-    Run the full Travel AI Crew for a given trip.
-    
-    Args:
-        destination: Travel destination (city/country)
-        start_date: YYYY-MM-DD
-        end_date: YYYY-MM-DD
-    
-    Returns:
-        dict with results from all agents
-    """
-    print(f"\n{'='*60}")
-    print(f"🚀 TRAVEL AI CREW STARTING")
-    print(f"📍 Destination: {destination}")
-    print(f"📅 Dates: {start_date} → {end_date}")
-    print(f"{'='*60}\n")
+    import datetime
+    from langchain_groq import ChatGroq
+    import os
 
-    llm_config = get_crewai_llm()
-    agents = create_agents(llm_config)
-    tasks = create_tasks(agents, destination, start_date, end_date)
+    trip_days = (
+        datetime.datetime.strptime(end_date, "%Y-%m-%d") -
+        datetime.datetime.strptime(start_date, "%Y-%m-%d")
+    ).days + 1
 
-    crew = Crew(
-        agents=list(agents),
-        tasks=tasks,
-        process=Process.sequential,  # Tasks run in order
-        verbose=True,
-        max_iter=15,
+    llm = ChatGroq(
+        model=os.getenv("LLM_MODEL", "llama-3.3-70b-versatile"),
+        temperature=0.3,
+        groq_api_key=os.getenv("GROQ_API_KEY"),
     )
 
-    result = crew.kickoff()
+    # Agent 1: Validate
+    validation = llm.invoke(f"You are a travel expert. Summarize this trip: Destination={destination}, Start={start_date}, End={end_date}, Duration={trip_days} days. Write 3 sentences about what to expect.").content
+
+    # Agent 2: Calendar
+    from tools.calendar_tool import check_calendar_availability, block_calendar
+    cal_check = check_calendar_availability(start_date, end_date)
+    if cal_check.get("available"):
+        cal_block = block_calendar(destination, start_date, end_date, validation)
+        calendar_output = f"✅ Calendar is free! Blocked dates for {destination}.\n{cal_block.get('message', '')}"
+    else:
+        calendar_output = f"⚠️ Calendar has conflicts: {cal_check.get('message', '')}"
+
+    # Agent 3: Itinerary
+    itinerary = llm.invoke(f"Create a detailed {trip_days}-day travel itinerary for {destination} from {start_date} to {end_date}. Include morning, afternoon, evening activities, food recommendations, and daily budget in INR for each day.").content
+
+    # Agent 4: Flights
+    from tools.flight_tool import search_flights
+    home_city = os.getenv("HOME_CITY", "Delhi")
+    flight_results = search_flights(home_city, destination, start_date, end_date)
+    flights_text = f"Flights from {home_city} to {destination}:\n"
+    for i, f in enumerate(flight_results.get("flights", [])[:3], 1):
+        seg = f["itineraries"][0]["segments"][0]
+        price = f["price"]
+        flights_text += f"{i}. {seg['carrier']}{seg['flight_number']} | {seg['departure']} → {seg['arrival']} | {price['currency']} {price['total']}\n"
+    flight_recommendation = llm.invoke(f"Based on these flights:\n{flights_text}\nWhich is the best option and why? Keep it brief.").content
 
     return {
         "destination": destination,
         "start_date": start_date,
         "end_date": end_date,
-        "result": str(result),
+        "result": itinerary,
         "task_outputs": {
-            "validation": str(tasks[0].output) if tasks[0].output else "",
-            "calendar": str(tasks[1].output) if tasks[1].output else "",
-            "itinerary": str(tasks[2].output) if tasks[2].output else "",
-            "flights": str(tasks[3].output) if tasks[3].output else "",
+            "validation": validation,
+            "calendar": calendar_output,
+            "itinerary": itinerary,
+            "flights": flights_text + "\n" + flight_recommendation,
         }
     }
 
